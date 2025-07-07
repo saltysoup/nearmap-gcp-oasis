@@ -36,7 +36,7 @@ spec:
      CPUS_PER_WORKER: "80"
      GPUS_PER_WORKER: "8"
   rayClusterSpec:
-   rayVersion: '2.41.0'
+   rayVersion: '2.47.0'
    headGroupSpec:
       rayStartParams:
         dashboard-host: '0.0.0.0'
@@ -51,7 +51,7 @@ spec:
                     operator: DoesNotExist
           containers:
             - name: ray-head
-              image: rayproject/ray:2.44.1-py39-cu128 # rayproject/ray-ml:2.41.0.021baf-py39 #
+              image: rayproject/ray:2.47.0 # rayproject/ray-ml:2.41.0.021baf-py39 #
               env:
               - name: NUM_WORKERS
                 value: "2"
@@ -108,7 +108,7 @@ spec:
               effect: "NoSchedule"
         containers:
         - name: ray-worker
-          image: rayproject/ray:2.44.1-py39-cu128 #rayproject/ray-ml:2.41.0.021baf-py39 #
+          image: rayproject/ray:2.47.0-gpu #rayproject/ray-ml:2.41.0.021baf-py39 #
           resources:
             limits:
               cpu: "100"
