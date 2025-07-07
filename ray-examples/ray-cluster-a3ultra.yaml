@@ -46,7 +46,8 @@ spec:
     minReplicas: 0
     maxReplicas: 4
     groupName: gpu-group
-    rayStartParams: {}
+    rayStartParams:
+      num-cpus: "224"
     template:
       metadata:
         annotations:
@@ -77,13 +78,15 @@ spec:
           image: rayproject/ray:2.47.0-gpu
           resources:
             limits:
-              cpu: "100"
-              memory: "600Gi"
+              cpu: "224"
+              memory: "2800Gi"
               nvidia.com/gpu: "8"
+              ephemeral-storage: "12Ti"
             requests:
-              cpu: "100"
-              memory: "600Gi"
+              cpu: "224"
+              memory: "2800Gi"
               nvidia.com/gpu: "8"
+              ephemeral-storage: "12Ti"
           volumeMounts:
           - name: nvidia
             mountPath: /usr/local/nvidia
@@ -91,6 +94,8 @@ spec:
             mountPath: /usr/local/gib
           - name: shared-memory
             mountPath: /dev/shm
+          - name: ray-tmp-storage
+            mountPath: /tmp
         volumes:
         - name: gib
           hostPath:
@@ -111,3 +116,5 @@ spec:
         - name: proc-sys
           hostPath:
             path: /proc/sys
+        - name: ray-tmp-storage
+          emptyDir: {}
