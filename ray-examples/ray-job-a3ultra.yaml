@@ -22,6 +22,7 @@ metadata:
     provreq.kueue.x-k8s.io/maxRunDurationSeconds: "1200" #this is the max run time in sec, max is 604800 (7 days)
   name: pytorch-mnist-job
 spec:
+  nodeSelector:
   suspend: true
   shutdownAfterJobFinishes: true
   entrypoint: python ai-ml/gke-ray/raytrain/dws/train.py
@@ -41,6 +42,13 @@ spec:
         dashboard-host: '0.0.0.0'
       template:
         spec:
+          affinity:
+            nodeAffinity:
+              requiredDuringSchedulingIgnoredDuringExecution:
+                nodeSelectorTerms:
+                - matchExpressions:
+                  - key: nvidia.com/gpu
+                    operator: DoesNotExist
           containers:
             - name: ray-head
               image: rayproject/ray:2.44.1-py39-cu128 # rayproject/ray-ml:2.41.0.021baf-py39 #
