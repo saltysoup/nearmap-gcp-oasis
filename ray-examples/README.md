@@ -1,4 +1,15 @@
-# A3 Ultra VMs have 3200 Gbps for GPU to GPU networking
+# Instructions
+
+1. Deploy ray cluster with kubectl apply -f ray-cluster-a3ultra.yaml 
+2. Wait until head pod and GPU VMs are deployed (takes upto 10 min)
+2.1 Use kubectl describe raycluster and kubectl describe provreq to confirm DWS provisioning working
+3. Once all pods are ready including GPU worker nodes, set up tunneling with local env with kubectl ray session pytorch-mnist-cluster &
+4. Run example job with
+```
+ray job submit   --address http://localhost:8265   --runtime-env runtime-env.yaml   --working-dir .   -- python test_nccl_rdma.py
+```
+
+### A3 Ultra VMs have 3200 Gbps for GPU to GPU networking, so expect 350-400GB/s bandwidth for NCCL AG/AR with 4GiB/8GiB message size
 
 ray job submit   --address http://localhost:8265   --runtime-env runtime-env.yaml   --working-dir .   -- python test_nccl_rdma.py
 Job submission server address: http://localhost:8265
