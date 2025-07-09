@@ -13,14 +13,17 @@ A minimal guide on deploying Ray on GKE autopilot with DWS Flex-Start nodepools 
 
 ## Instructions
 
+## Infra provisioning
+
 1. Set env var for our cloud resources - ref https://cloud.google.com/ai-hypercomputer/docs/create/gke-ai-hypercompute-custom#create-vpcs-and-subnets
 
 ```
 export REGION="us-central1"
 export ZONE="us-central1-b"
 export PROJECT="gpu-launchpad-playground"
-export GVNIC_NETWORK_PREFIX="a3u-dws-primary"
-export RDMA_NETWORK_PREFIX="a3u-dws-rdma"
+export PROJECT_NUMBER="604327164091"
+export GVNIC_NETWORK_PREFIX="a3u-dws-primary1"
+export RDMA_NETWORK_PREFIX="a3u-dws-rdma1"
 export GKE_VERSION="1.33.1-gke.1107000"
 export CLUSTER_NAME="ikwak-h200-dws1"
 export COMPUTE_REGION=$REGION
@@ -32,6 +35,8 @@ export NUM_NODES=0 # Must be set to 0 for flex-start to initialise 0 sized nodep
 export TOTAL_MAX_NODES=4 # Max number of nodes that can scale up in nodepool for flex-start. Could be upto 1000 VMs (8k GPUs)
 export DRIVER_VERSION="latest"
 export WORKLOAD_IDENTITY=$PROJECT.svc.id.goog
+export BUCKET_NAME="ikwak-ray"
+export KSA_NAME="ksa-ray"
 ```
 
 2. Create RDMA VPC and a Standard VPC (non RDMA)
@@ -82,9 +87,11 @@ gcloud container clusters create $CLUSTER_NAME \
   --region=$REGION \
   --cluster-version=$GKE_VERSION \
   --addons=RayOperator,GcsFuseCsiDriver \
+  --enable-ray-cluster-monitoring \
+  --enable-ray-cluster-logging \
   --machine-type=e2-standard-8 \
   --node-locations=$ZONE \
-  --num-nodes=2 \
+  --num-nodes=4 \
   --workload-pool $WORKLOAD_IDENTITY \
   --enable-dataplane-v2 --enable-ip-alias --enable-multi-networking
 ```
@@ -342,7 +349,24 @@ clusterqueue.kueue.x-k8s.io/dws-cluster-queue created
 localqueue.kueue.x-k8s.io/dws-local-queue created
 ```
 
-10. Deploy an example NCCL test to verify that the RDMA network is being used between the GPU VMs
+10. Create a GCS bucket for training data
+```
+gcloud storage buckets create gs://$BUCKET_NAME --uniform-bucket-level-access
+```
+
+11. Create a kubernetes service account. This will be used for GCS fuse access for the worker pods
+```
+kubectl create serviceaccount $KSA_NAME
+```
+
+12. Grant the kubernetes service account read-write access to the bucket
+```
+gcloud storage buckets add-iam-policy-binding gs://$BUCKET_NAME --member "principal://iam.googleapis.com/projects/$PROJECT_NUMBER/locations/global/workloadIdentityPools/$WORKLOAD_IDENTITY/subject/ns/default/sa/$KSA_NAME"   --role "roles/storage.admin"
+```
+
+## Test application
+
+1. Deploy an example NCCL test to verify that the RDMA network is being used between the GPU VMs
 
 ```
 kubectl apply -f nccl.yml

@@ -5,9 +5,9 @@ metadata:
   labels:
     kueue.x-k8s.io/queue-name: dws-local-queue
   annotations:
-    provreq.kueue.x-k8s.io/maxRunDurationSeconds: "41600" # Max run time in sec
+    provreq.kueue.x-k8s.io/maxRunDurationSeconds: "41600" # Max run time in sec for DWS
 spec:
-  suspend: false #true ensures all pods start together
+  suspend: true # pods arent scheduled until GPU nodes are provisioned via DWS
   rayVersion: '2.47.0'
   headGroupSpec:
     rayStartParams:
@@ -36,8 +36,8 @@ spec:
               memory: "5G"
               ephemeral-storage: "9Gi"
           volumeMounts:
-            - mountPath: /tmp/ray
-              name: ray-logs
+            - name: ray-logs
+              mountPath: /tmp/ray
         volumes:
           - name: ray-logs
             emptyDir: {}
@@ -50,10 +50,11 @@ spec:
       num-cpus: "220"
     template:
       metadata:
-        #labels:
-         # kueue.x-k8s.io/queue-name: dws-local-queue
         annotations:
-          #provreq.kueue.x-k8s.io/maxRunDurationSeconds: "41600" # Max run time in sec
+          gke-gcsfuse/volumes: "true"
+          gke-gcsfuse/cpu-limit: "0"
+          gke-gcsfuse/memory-limit: "0"
+          gke-gcsfuse/ephemeral-storage-limit: "0"
           kueue.x-k8s.io/podset-preferred-topology: "kubernetes.io/hostname"
           networking.gke.io/default-interface: 'eth0'
           networking.gke.io/interfaces: |
@@ -70,6 +71,7 @@ spec:
               {"interfaceName":"eth9","network":"rdma-7"}
             ]
       spec:
+        serviceAccountName: "ksa-ray" # MODIFY: $KSA_NAME name of kubernetes service account
         nodeSelector:
           cloud.google.com/gke-nodepool: "h200-dws"
         tolerations:
@@ -99,6 +101,8 @@ spec:
             mountPath: /dev/shm
           - name: ray-tmp-storage
             mountPath: /tmp
+          - name: gcs-fuse-csi-eph
+            mountPath: /bucket
         volumes:
         - name: gib
           hostPath:
@@ -121,3 +125,10 @@ spec:
             path: /proc/sys
         - name: ray-tmp-storage
           emptyDir: {}
+        - name: gcs-fuse-csi-eph
+          csi:
+            driver: gcsfuse.csi.storage.gke.io
+            volumeAttributes:
+              bucketName: ikwak-ray # MODIFY: $BUCKET_NAME name of GCS bucket
+              gcsfuseMetadataPrefetchOnMount: "true"
+              mountOptions: "implicit-dirs,file-mode=777,dir-mode=777,file-cache:enable-parallel-downloads:true,file-cache:cache-file-for-range-read:true,file-cache:max-size-mb:-1,write:enable-streaming-writes:true,read_ahead_kb=1024,file-system:kernel-list-cache-ttl-secs:-1"
