@@ -7,12 +7,18 @@ metadata:
   annotations:
     provreq.kueue.x-k8s.io/maxRunDurationSeconds: "41600" # Max run time in sec for DWS
 spec:
-  suspend: true # pods arent scheduled until GPU nodes are provisioned via DWS
+  suspend: false # pods arent scheduled until GPU nodes are provisioned via DWS
   rayVersion: '2.47.0'
   headGroupSpec:
     rayStartParams:
       dashboard-host: '0.0.0.0'
     template:
+      metadata:
+        annotations: 
+          gke-gcsfuse/volumes: "true"
+          gke-gcsfuse/cpu-limit: "0"
+          gke-gcsfuse/memory-limit: "0"
+          gke-gcsfuse/ephemeral-storage-limit: "0"
       spec:
         nodeSelector:
           cloud.google.com/gke-nodepool: "default-pool"
@@ -38,9 +44,18 @@ spec:
           volumeMounts:
             - name: ray-logs
               mountPath: /tmp/ray
+            - name: gcs-fuse-csi-eph
+              mountPath: /bucket
         volumes:
           - name: ray-logs
             emptyDir: {}
+          - name: gcs-fuse-csi-eph
+            csi:
+              driver: gcsfuse.csi.storage.gke.io
+              volumeAttributes:
+                bucketName: ikwak-ray # MODIFY: $BUCKET_NAME name of GCS bucket
+                gcsfuseMetadataPrefetchOnMount: "true"
+                mountOptions: "implicit-dirs,file-mode=777,dir-mode=777,file-cache:enable-parallel-downloads:true,file-cache:cache-file-for-range-read:true,file-cache:max-size-mb:-1,write:enable-streaming-writes:true,read_ahead_kb=1024,file-system:kernel-list-cache-ttl-secs:-1"
   workerGroupSpecs:
   - replicas: 2
     minReplicas: 0
