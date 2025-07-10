@@ -8,7 +8,7 @@ metadata:
     provreq.kueue.x-k8s.io/maxRunDurationSeconds: "41600" # Max run time in sec for DWS
 spec:
   suspend: false # pods arent scheduled until GPU nodes are provisioned via DWS
-  rayVersion: '2.47.0'
+  rayVersion: '2.46.0'
   headGroupSpec:
     rayStartParams:
       dashboard-host: '0.0.0.0'
@@ -24,7 +24,7 @@ spec:
           cloud.google.com/gke-nodepool: "default-pool"
         containers:
         - name: ray-head
-          image: rayproject/ray:2.47.0
+          image: rayproject/ray:2.46.0-cu128
           ports:
             - containerPort: 6379
               name: gcs-server
@@ -95,7 +95,11 @@ spec:
             effect: "NoSchedule"
         containers:
         - name: ray-worker
-          image: rayproject/ray:2.47.0-gpu
+          image: rayproject/ray:2.46.0-cu128
+          env:
+          - name: LD_LIBRARY_PATH
+            value: /usr/local/nvidia/lib64
+          command: ["source /usr/local/gib/scripts/set_nccl_env.sh && unset NCCL_NET"] #workaround for gibv1.0.6
           resources:
             limits:
               cpu: "220"

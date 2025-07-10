@@ -53,6 +53,9 @@ class P2PWorker:
         self.world_size = world_size
         self.tensor_size_bytes = int(tensor_gb * 1024 * 1024 * 1024)
 
+        for key, value in os.environ.items():
+          print(f"{key}: {value}")
+
         collective.init_collective_group(
             world_size=self.world_size,
             rank=self.rank,
